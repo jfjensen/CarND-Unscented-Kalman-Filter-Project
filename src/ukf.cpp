@@ -155,11 +155,11 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     UpdateRadar(meas_package);
   }
 
-  if (use_laser_)
+  if (meas_package.sensor_type_ == MeasurementPackage::LASER)
   {
     // Laser updates
     cout << "LASER update ==============================================================="<< endl;
-    //UpdateLidar(meas_package);
+    UpdateLidar(meas_package);
     
   }
 
@@ -198,7 +198,7 @@ void UKF::Prediction(double delta_t) {
   P_aug(n_aug_ - 2, n_aug_ - 2) = std_a_ * std_a_;
   P_aug(n_aug_ - 1, n_aug_ - 1) = std_yawdd_ * std_yawdd_;
 
-  cout << " P augmented: " << P_aug << endl;
+  //cout << " P augmented: " << P_aug << endl;
 
   MatrixXd A = P_aug.llt().matrixL();
 
@@ -280,9 +280,9 @@ void UKF::Prediction(double delta_t) {
     x_new = x_new + (weights_(i) * Xsig_pred_.col(i));
   }
 
-cout << "x before: " << x_ << endl;
+//cout << "x before: " << x_ << endl;
   x_ = x_new;
-  cout << "x after: " << x_ << endl;
+//  cout << "x after: " << x_ << endl;
 
   MatrixXd P_new = MatrixXd(n_x_, n_x_);
   P_new.fill(0.0);
@@ -295,9 +295,9 @@ cout << "x before: " << x_ << endl;
 
     P_new = P_new + weights_(i) * x_diff * x_diff.transpose();
   }
-cout << "P before: " << P_ << endl;
+//cout << "P before: " << P_ << endl;
   P_ = P_new;
-cout << "P after: " << P_ << endl;
+//cout << "P after: " << P_ << endl;
 }
 
 /**
@@ -313,6 +313,80 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the lidar NIS.
   */
+
+    int n_z = 2;
+  int n_sig = 2 * n_aug_ + 1;
+
+  //create matrix for sigma points in measurement space
+  MatrixXd Zsig = MatrixXd(n_z, n_sig);
+  for(unsigned int i = 0; i < n_sig; i++)
+  {
+    double px      = Xsig_pred_(0,i);
+    double py      = Xsig_pred_(1,i);
+  
+    Zsig(0,i) = px;
+    Zsig(1,i) = py;
+  
+  }
+
+  //mean predicted measurement
+  VectorXd z_pred = VectorXd(n_z);
+  z_pred.fill(0.0);
+  for (unsigned int j = 0; j < n_sig; j++)
+  {
+    z_pred = z_pred + (weights_(j) * Zsig.col(j));
+  }
+
+
+  //measurement covariance matrix S
+  MatrixXd S = MatrixXd(n_z,n_z);
+  S.fill(0.0);
+  for (unsigned int j = 0; j < n_sig; j++)
+  {
+    VectorXd z_diff = Zsig.col(j) - z_pred;
+  
+    S = S + weights_(j) * z_diff * z_diff.transpose();
+  }
+
+  MatrixXd R(n_z,n_z);
+  R << std_laspx_ * std_laspx_, 0,
+       0, std_laspy_ * std_laspy_;
+
+
+  S = S + R;
+
+  //create example vector for incoming radar measurement
+  VectorXd z = VectorXd(n_z);
+  z <<meas_package.raw_measurements_(0),   //px
+      meas_package.raw_measurements_(1);   //py
+ 
+//cout << "z: " << z << endl;
+  //create matrix for cross correlation Tc
+  MatrixXd Tc = MatrixXd(n_x_, n_z);
+  Tc.fill(0.0);
+  for (unsigned int j = 0; j < n_sig; j++)
+  {
+    
+    VectorXd x_diff = Xsig_pred_.col(j) - x_;
+    VectorXd z_diff = Zsig.col(j) - z_pred;
+ 
+    Tc = Tc + weights_(j) * x_diff * z_diff.transpose();
+  }
+
+  MatrixXd K = Tc * S.inverse();
+
+  VectorXd z_diff = z - z_pred;
+
+//  cout << "x before: " << x_ << endl;
+  x_ = x_ + (K * z_diff);
+//cout << "x after: " << x_ << endl;
+//cout << "P before: " << P_ << endl;
+  P_ = P_ - (K * S * K.transpose());
+//  cout << "P after: " << P_ << endl;
+  NIS_laser_ = z_diff.transpose() * S.inverse() * z_diff;
+
+
+
 }
 
 /**
@@ -388,7 +462,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   z <<meas_package.raw_measurements_(0),   //rho in m
       meas_package.raw_measurements_(1),   //phi in rad
       meas_package.raw_measurements_(2);   //rho_dot in m/s
-cout << "z: " << z << endl;
+//cout << "z: " << z << endl;
   //create matrix for cross correlation Tc
   MatrixXd Tc = MatrixXd(n_x_, n_z);
   Tc.fill(0.0);
@@ -411,10 +485,11 @@ cout << "z: " << z << endl;
   while (z_diff(1)> M_PI) z_diff(1)-=2.*M_PI;
   while (z_diff(1)<-M_PI) z_diff(1)+=2.*M_PI;
 
-  cout << "x before: " << x_ << endl;
+//  cout << "x before: " << x_ << endl;
   x_ = x_ + (K * z_diff);
-cout << "x after: " << x_ << endl;
-cout << "P before: " << P_ << endl;
+//cout << "x after: " << x_ << endl;
+//cout << "P before: " << P_ << endl;
   P_ = P_ - (K * S * K.transpose());
-  cout << "P after: " << P_ << endl;
+//  cout << "P after: " << P_ << endl;
+  NIS_radar_ = z_diff.transpose() * S.inverse() * z_diff;
 }
