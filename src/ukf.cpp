@@ -25,7 +25,7 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 2.50;//30;
+  std_a_ = 2.0;//30;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   std_yawdd_ = 0.80;//30;
@@ -137,7 +137,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     // double w2 = 1 / (2 * (lambda_ + n_aug_));
     double w1 = lambda_ / (lambda_ + n_x_);
     double w2 = 1 / (2 * (lambda_ + n_x_));
-    weights_(0) = w1;
+    // weights_(0) = w1;
     weights_(0) = w1;
     for (unsigned int i = 1; i < n_sig; i++)
     {
@@ -154,12 +154,13 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   time_us_ = meas_package.timestamp_;
   //cout << "So far so good..." << dt << endl;
   cout << "PREDICTION ==============================================================="<< endl;
-  Prediction(dt);
+  //Prediction(dt);
 
 
   if (use_radar_ and meas_package.sensor_type_ == MeasurementPackage::RADAR)
   {
     // Radar updates
+    Prediction(dt);/// ?
     cout << "RADAR update ==============================================================="<< endl;
     UpdateRadar(meas_package);
   }
@@ -167,6 +168,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   if (use_laser_ and meas_package.sensor_type_ == MeasurementPackage::LASER)
   {
     // Laser updates
+    Prediction(dt); /// ??
     cout << "LASER update ==============================================================="<< endl;
     UpdateLidar(meas_package);
     
@@ -381,6 +383,8 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
     
     VectorXd x_diff = Xsig_pred_.col(j) - x_;
     VectorXd z_diff = Zsig.col(j) - z_pred;
+    if (x_diff(3)> M_PI) x_diff(3) = remainder(x_diff(3), (2.*M_PI)) - M_PI;
+    if (x_diff(3)<-M_PI) x_diff(3) = remainder(x_diff(3), (2.*M_PI)) + M_PI;
  
     Tc = Tc + weights_(j) * x_diff * z_diff.transpose();
   }
