@@ -25,7 +25,7 @@ UKF::UKF() {
   P_ = MatrixXd(5, 5);
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 2.0;//30;
+  std_a_ = 0.8;//30;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   std_yawdd_ = 0.80;//30;
@@ -62,7 +62,8 @@ UKF::UKF() {
   n_aug_ = 7;
 
   // Sigma point spreading parameter
-  lambda_ = 3 - n_x_; // ?
+  // lambda_ = 3 - n_x_; // ?
+  lambda_ = 3 - n_aug_; // ?
 
   weights_ = VectorXd(2 * n_aug_ + 1);
 
@@ -133,10 +134,10 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
           -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
 
     int n_sig = 2 * n_aug_ + 1;
-    // double w1 = lambda_ / (lambda_ + n_aug_);
-    // double w2 = 1 / (2 * (lambda_ + n_aug_));
-    double w1 = lambda_ / (lambda_ + n_x_);
-    double w2 = 1 / (2 * (lambda_ + n_x_));
+    double w1 = lambda_ / (lambda_ + n_aug_);
+    double w2 = 1 / (2 * (lambda_ + n_aug_));
+    // double w1 = lambda_ / (lambda_ + n_x_);
+    // double w2 = 1 / (2 * (lambda_ + n_x_));
     // weights_(0) = w1;
     weights_(0) = w1;
     for (unsigned int i = 1; i < n_sig; i++)
@@ -215,14 +216,15 @@ void UKF::Prediction(double delta_t) {
 
   Xsig_aug.col(0) = x_aug;
 
-  float sqrt_lambda_n_x = sqrt(lambda_ + n_x_);
+  // float sqrt_lambda_n_x = sqrt(lambda_ + n_x_);
+  float sqrt_lambda_n_aug = sqrt(lambda_ + n_aug_);
 
   //std::cout << "so far so good..." << std::endl;
 
   for (unsigned int i = 0; i < n_aug_; i++)
   {
-    Xsig_aug.col(i + 1)          = x_aug + sqrt_lambda_n_x * A.col(i);
-    Xsig_aug.col(i + 1 + n_aug_) = x_aug - sqrt_lambda_n_x * A.col(i);
+    Xsig_aug.col(i + 1)          = x_aug + sqrt_lambda_n_aug * A.col(i);
+    Xsig_aug.col(i + 1 + n_aug_) = x_aug - sqrt_lambda_n_aug * A.col(i);
   }
 
   //create matrix with predicted sigma points as columns
