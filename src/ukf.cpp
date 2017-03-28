@@ -28,7 +28,7 @@ UKF::UKF() {
   std_a_ = 0.8;//30;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
-  std_yawdd_ = 0.80;//30;
+  std_yawdd_ = 0.60;//30;
 
   // Laser measurement noise standard deviation position1 in m
   std_laspx_ = 0.15;
@@ -154,7 +154,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   double dt = (meas_package.timestamp_ - time_us_) / 1000000.0; //dt - expressed in seconds
   time_us_ = meas_package.timestamp_;
   //cout << "So far so good..." << dt << endl;
-  cout << "PREDICTION ==============================================================="<< endl;
+  // cout << "PREDICTION ==============================================================="<< endl;
   //Prediction(dt);
 
 
@@ -162,7 +162,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   {
     // Radar updates
     Prediction(dt);/// ?
-    cout << "RADAR update ==============================================================="<< endl;
+    // cout << "RADAR update ==============================================================="<< endl;
     UpdateRadar(meas_package);
   }
 
@@ -170,7 +170,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   {
     // Laser updates
     Prediction(dt); /// ??
-    cout << "LASER update ==============================================================="<< endl;
+    // cout << "LASER update ==============================================================="<< endl;
     UpdateLidar(meas_package);
     
   }
@@ -286,7 +286,7 @@ void UKF::Prediction(double delta_t) {
    
 
   }
-cout << "X_sig_pred_ " << Xsig_pred_ << endl;
+//cout << "X_sig_pred_ " << Xsig_pred_ << endl;
   VectorXd x_new = VectorXd(n_x_);
   x_new.fill(0.0);
   for (unsigned int i = 0; i < n_sig; i++)
@@ -433,13 +433,13 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
     double v       = Xsig_pred_(2,i);
     double psi     = Xsig_pred_(3,i);
  
-    cout << "px: " << px << " py: " << py << endl;
+    // cout << "px: " << px << " py: " << py << endl;
     double rho     = sqrt(px*px + py*py);
     if (rho < 0.001)
     {
       rho = 0.001;
     }
-    cout << "rho: " << rho << endl;
+    // cout << "rho: " << rho << endl;
     double phi     = std::atan2(py,px);
     double rho_dot = (px*cos(psi)*v + py*sin(psi)*v) / rho;
 
